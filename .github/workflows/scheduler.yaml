@@ -1,0 +1,45 @@
+name: scheduler
+on:
+  push:
+    branches: [main]
+#  schedule:
+#    - cron:  '0 0 * * *'
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: ./go.mod
+          cache: true
+      - name: Detect new version
+        run: |
+          go mod download
+          go run main.go > versions
+          cat versions | head -n 1 > latest
+      - name: Set GITHUB_ENV
+        run: |
+          echo "LATEST_VERSION=$(cat latest)" >> $GITHUB_ENV
+          echo "CHANGES=$(git diff --quiet --exit-code || echo "true")" >> $GITHUB_ENV
+
+      - name: Push version
+        if: ${{ env.CHANGES == 'true' }}
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add .
+          git commit -m "Version ${{ env.LATEST_VERSION }} of EKS has been now released"
+          git push
+          
+          git tag -a v${{ env.LATEST_VERSION }} -m "v${{ env.LATEST_VERSION }}"
+          git push origin v${{ env.LATEST_VERSION }}
+
+      - name: Create releases
+        if: ${{ env.CHANGES == 'true' }}
+        run: |
+          gh release create v${{ env.LATEST_VERSION }} --notes "Version ${{ env.LATEST_VERSION }} of EKS has been now released" latest versions
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
