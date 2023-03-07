@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -24,12 +25,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	re := regexp.MustCompile(`^\d+\.\d+$`)
 	doc.Find("ul").Each(func(i int, s *goquery.Selection) {
 		if i != 0 {
 			return
 		}
 		s.Find("p").Each(func(_ int, s *goquery.Selection) {
-			fmt.Printf("%s\n", s.Text())
+			version := s.Text()
+			if !re.MatchString(version) {
+				log.Fatalf("version is not semver compliant: `%s`", version)
+			}
+
+			fmt.Printf("%s\n", version)
 		})
 	})
 }
