@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -31,7 +32,7 @@ func main() {
 			return
 		}
 		s.Find("p").Each(func(_ int, s *goquery.Selection) {
-			version := s.Text()
+			version := strings.TrimSpace(s.Text())
 			if !re.MatchString(version) {
 				log.Fatalf("version is not semver compliant: `%s`", version)
 			}
